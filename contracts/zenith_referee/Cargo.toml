@@ -1,0 +1,21 @@
+[package]
+name = "zenith-referee"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+testutils = ["soroban-sdk/testutils"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+zenith-shared = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+zenith-vault = { path = "../zenith_vault", features = ["testutils"] }
+ed25519-dalek = "=2.2.0"
