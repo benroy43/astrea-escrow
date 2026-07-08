@@ -1,0 +1,12 @@
+target/
+test_snapshots/
+node_modules/
+.next/
+out/
+.env
+.env.local
+.DS_Store
+*.wasm
+!contracts/**/fixtures/*.wasm
+.stellar/
+.wrangler/
