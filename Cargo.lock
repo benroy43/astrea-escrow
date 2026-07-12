@@ -181,6 +181,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
 
 [[package]]
+name = "astraea-arbiter"
+version = "0.1.0"
+dependencies = [
+ "astraea-escrow",
+ "astraea-shared",
+ "ed25519-dalek",
+ "soroban-sdk",
+]
+
+[[package]]
+name = "astraea-escrow"
+version = "0.1.0"
+dependencies = [
+ "astraea-arbiter",
+ "astraea-shared",
+ "ed25519-dalek",
+ "soroban-sdk",
+]
+
+[[package]]
+name = "astraea-shared"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1850,33 +1877,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7837d08f69c77cf6b07689544538e017c1bfcf57e34b4c0ff58e6c2cd3b37091"
 dependencies = [
  "windows-link",
-]
-
-[[package]]
-name = "zenith-referee"
-version = "0.1.0"
-dependencies = [
- "ed25519-dalek",
- "soroban-sdk",
- "zenith-shared",
- "zenith-vault",
-]
-
-[[package]]
-name = "zenith-shared"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "zenith-vault"
-version = "0.1.0"
-dependencies = [
- "ed25519-dalek",
- "soroban-sdk",
- "zenith-referee",
- "zenith-shared",
 ]
 
 [[package]]

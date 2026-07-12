@@ -1,9 +1,9 @@
 [workspace]
 resolver = "2"
 members = [
-    "contracts/zenith_vault",
-    "contracts/zenith_referee",
-    "contracts/zenith_shared",
+    "contracts/astraea_escrow",
+    "contracts/astraea_arbiter",
+    "contracts/astraea_shared",
 ]
 
 [workspace.package]
@@ -14,7 +14,7 @@ publish = false
 
 [workspace.dependencies]
 soroban-sdk = "26.1.0"
-zenith-shared = { path = "contracts/zenith_shared" }
+astraea-shared = { path = "contracts/astraea_shared" }
 
 [profile.release]
 opt-level = "z"

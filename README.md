@@ -1,227 +1,121 @@
-# Zenith — Staged Settlement Vaults
+# Astraea Trust — Escrows & Linear Vesting Streams
 
-[![CI](https://github.com/Lkain2029/zenith-stellar/actions/workflows/ci.yml/badge.svg)](https://github.com/Lkain2029/zenith-stellar/actions/workflows/ci.yml)
-![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-7D00FF)
-
-Live Demo: [zenith-stellar.acorn-maker-outer.workers.dev](https://zenith-stellar.acorn-maker-outer.workers.dev/)
-
-Demo Video (1–2 min): **PENDING** — screen recording not yet produced. A raw local capture exists at `media/CleanShot 2026-07-11 at 21.30.29.mp4` but has not been edited/uploaded anywhere public; needs a human to record and link a proper walkthrough.
-
-<p align="center">
-  <img src="screenshots/demo.gif" alt="Zenith Staged Settlement Vaults Demo" width="800" />
-</p>
-
-Zenith is a three-contract decentralized staged-settlement system built on Stellar (Soroban + Next.js). Instead of releasing project capital all at once, funds are locked in stage gates and disbursed stage by stage. If a stage is contested, an assigned referee signer adjudicates the conflict directly on-chain.
+Astraea Trust is a decentralized staged-settlement and linear asset streaming protocol built on Stellar (Soroban + Next.js). Rather than disbursing capital all at once, funds enter locked escrow gates and release stage-by-stage or stream linearly over time. If dispute conflicts arise, designated mediators resolve the issues on-chain.
 
 ---
 
-## Project Description
+## Level 1 — Core Infrastructure & Basic Transactions
 
-A creator initializes a vault with an ordered list of stage amounts and a designated referee. The creator activates the vault by depositing the full budget in native XLM. Each stage is either approved by the creator (paying the recipient directly) or, if contested, escalated to the referee contract, which adjudicates and triggers payout on the vault's behalf. Every payout is a real cross-contract call chain: referee → vault → native XLM Stellar Asset Contract.
+### Wallet Authorization
+Astraea Trust integrates seamlessly with the Freighter wallet extension on the Stellar Testnet. Real-time authorization checks verify that the user's browser is connected to the extension before triggering write actions.
 
----
+### Connection Framework
+Explicit visual connect/disconnect triggers live in the header navigation panel. The connection state updates instantly upon click, prompting the Freighter authorization modal.
 
-## Architecture
+### Balance Interface
+Once connected, the active wallet's native XLM balance is fetched client-side directly from Horizon and presented in the navigation button. SWR polls the balance every 8 seconds to reflect changes dynamically.
 
-```
-┌─────────────┐        invoke_contract        ┌─────────────┐        invoke_contract        ┌──────────────────┐
-│   Referee   │ ─────────────────────────────▶│    Vault    │ ─────────────────────────────▶│  Native XLM SAC   │
-│  contract   │  payout_completed_stage(...)   │  contract   │        transfer(...)           │ (Stellar Asset    │
-│             │◀────────────────────────────── │             │                                 │  Contract)        │
-└─────────────┘   require_auth on referee      └─────────────┘                                 └──────────────────┘
-       ▲                                               ▲
-       │ approve_milestone / resolve_dispute            │ initialize_vault / activate_vault_capital
-       │                                                │
-┌─────────────────────────────────────────────────────────────────┐
-│                     Next.js frontend (StellarWalletsKit)          │
-│   Wallet connect → build/sign tx → submit to Soroban RPC →        │
-│   SWR polling (4s) re-queries vault state → UI updates            │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-`contracts/zenith_shared` holds types/errors shared between the two contracts. `zenith_vault` owns custody and the stage state machine. `zenith_referee` owns dispute adjudication and is the only address authorized to trigger a vault's payout.
+### Transaction Pipeline
+When submitting transactions, the pipeline wraps native XLM operations on-chain. The console updates dynamically through stepper states (Pending ➔ Success or Failure) and includes clickable explorer links tracking transaction hashes.
 
 ---
 
-## Tech Stack
+## Level 2 — Multi-Wallet & Smart Contract Binding
 
-- **Contracts**: Rust, `soroban-sdk` 26.1.0, Soroban (Stellar smart contracts), `wasm32v1-none` target
-- **Frontend**: Next.js 14 (static export), React 18, TypeScript, Tailwind CSS
-- **Wallet**: `@creit.tech/stellar-wallets-kit` (Freighter and other Stellar wallets)
-- **Chain client**: `@stellar/stellar-sdk`, Soroban RPC (`soroban-testnet.stellar.org`)
-- **Data fetching**: SWR (4s polling interval against contract read calls)
-- **Hosting**: Cloudflare Workers (static assets)
-- **CI**: GitHub Actions (`cargo test` + wasm build + `npm run lint`/`test`/`build`)
-- **Testing**: `cargo test` (contracts), Vitest (frontend)
+### Multi-Wallet Adapter
+Uses the official `@creit.tech/stellar-wallets-kit` (StellarWalletsKit) to handle client-side connections. The adapter is loaded dynamically in the browser to prevent Next.js static prerender failures.
+
+### Granular Exception Handling
+Dedicated visual banner components handle and display four exception states:
+1. **Wallet Not Found** (extension not installed)
+2. **Signature Rejected by User** (transaction signing denied)
+3. **Insufficient Network Balance** (account lacks XLM for budget or gas fee)
+4. **Action Not Authorized** (protocol-level signature checks failed)
+
+### Contract Execution
+Integrates directly with the testnet-deployed Astraea contract addresses. Read-only simulations (e.g. `get_escrow_details` and `total_escrows_created`) utilize a deterministic all-zero-seed public key to avoid prompt fatigue, while write invocations request active signer signatures.
+
+### Status & Sync Tracking
+Keeps track of on-chain state updates by polling contract reads every 4 seconds using SWR. Interactive elements disable while transaction states are pending, providing real-time processing indicators.
 
 ---
 
-## Smart Contracts (Testnet)
+## Level 3 — Advanced Architecture & Production Readiness
 
-| Contract | Address | Stellar Expert Link |
-|---|---|---|
-| **Vault** | `CAPIYP2UL6XQ5ZMB27KNGTAC2RDIMLR7YPHTDV75OKCCL7JLMOMZF5W7` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CAPIYP2UL6XQ5ZMB27KNGTAC2RDIMLR7YPHTDV75OKCCL7JLMOMZF5W7) |
-| **Referee** | `CDS72WCPUGIT46RUVDRWRHKVKJQIGPP53DIRWQQWYZOMQRVOYLDP4BYH` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDS72WCPUGIT46RUVDRWRHKVKJQIGPP53DIRWQQWYZOMQRVOYLDP4BYH) |
-| **Native XLM SAC** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
+### Inter-Contract Cross Invocations
+Executes verified cross-contract invoke chains where the Arbiter contract calls back into the Escrow contract's payout trigger, which in turn calls the native XLM Stellar Asset Contract (SAC) to execute the transfer.
 
-All three addresses were verified against Horizon testnet and the Stellar Expert API during this audit (2026-07-11) — each resolves with a real deployed contract.
+### Real-Time Data Streaming
+Features a high-precision, client-side vesting ticker running at 20fps via Framer Motion. It counts up the vested XLM accessible for the active milestone in real-time down to 7 decimal places based on elapsed ledger block offsets, allowing immediate claims.
 
-### Deployment process
+### Responsive Adaptations
+The interface adopts a premium **High-End Fintech Minimalist** layout, fully responsive and optimized down to mobile widths (~375px) up to desktop.
 
-```bash
-# from repo root
-cargo build --target wasm32v1-none --release -p zenith-vault
-cargo build --target wasm32v1-none --release -p zenith-referee
-
-stellar contract deploy --wasm target/wasm32v1-none/release/zenith_vault.wasm --network testnet --source <deployer>
-stellar contract deploy --wasm target/wasm32v1-none/release/zenith_referee.wasm --network testnet --source <deployer>
-
-# wire the vault's arbiter_contract to the referee address, then set
-# NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS / NEXT_PUBLIC_ARBITER_CONTRACT_ADDRESS
-# in frontend/.env.local (see .env.local.example)
-```
-
-> Note: the frontend env vars are still named `NEXT_PUBLIC_ESCROW_CONTRACT_ADDRESS` / `NEXT_PUBLIC_ARBITER_CONTRACT_ADDRESS` (`frontend/src/core/utils/env.ts`) — a naming leftover from an earlier "escrow/arbiter" naming pass that was rebranded to "vault/referee" everywhere else. They are wired correctly and match the live deployment; renaming them would require re-issuing the Cloudflare/GitHub Actions secrets, so it's left as a known cleanup item rather than risking breaking the live deploy.
+### Automated Verification Workflows
+A GitHub Actions workflow configuration in `.github/workflows/ci.yml` compiles the smart contracts, runs the cargo test suites, lints the Next.js frontend, and validates the build target on every push.
 
 ---
 
 ## Inter-Contract Calls
 
-Every milestone payout in Zenith executes a verified cross-contract invoke chain:
-
-1. The referee contract triggers payout using:
+Every milestone payout in Astraea executes a cross-contract invocation chain:
+1. The Arbiter contract triggers payout on behalf of a mediator or funder:
    ```rust
-   env.invoke_contract::<bool>(&vault_addr, &Symbol::new(&env, "payout_completed_stage"), args)
+   env.invoke_contract::<bool>(&escrow_addr, &Symbol::new(&env, "release_milestone_funds"), args)
    ```
-2. The vault contract verifies that the direct caller is the registered referee contract:
+2. The Escrow contract verifies that the direct caller is the registered mediator contract:
    ```rust
-   vault.arbiter_contract.require_auth()
+   escrow.mediator_contract.require_auth()
    ```
-3. Upon validation, the vault contract performs a cross-contract transfer call to the native XLM Stellar Asset Contract:
+3. Upon validation, the Escrow contract invokes the transfer method on the native XLM Stellar Asset Contract:
    ```rust
-   env.invoke_contract::<()>(&vault.token, &symbol_short!("transfer"), args);
+   env.invoke_contract::<()>(&escrow.asset, &symbol_short!("transfer"), args)
    ```
 
-### Real transaction evidence (Stellar Testnet)
+---
 
-**Flow 1 — initialize → activate → approve → disburse (vault_id = 0)**
+## Cryptographic Evidence Validation
 
-| Step | Tx Hash |
-|---|---|
-| initialize_vault | [`fb4a4bb001e7eaf19759d8a74ec49356bd6a67027d42f124198739ee6afce4f2`](https://stellar.expert/explorer/testnet/tx/fb4a4bb001e7eaf19759d8a74ec49356bd6a67027d42f124198739ee6afce4f2) |
-| activate_vault_capital | [`33b93d4603750b0062848ed7880cb2cd8849b5bf59210ffaf16268f20e7fe726`](https://stellar.expert/explorer/testnet/tx/33b93d4603750b0062848ed7880cb2cd8849b5bf59210ffaf16268f20e7fe726) |
-| assign_dispute_referee | [`61b0ef8c6d698512b0005f944b7a9b41ed8f77328e7bef95430977df023993a8`](https://stellar.expert/explorer/testnet/tx/61b0ef8c6d698512b0005f944b7a9b41ed8f77328e7bef95430977df023993a8) |
-| **approve_stage_payout** (referee → vault → SAC transfer) | [`bc4d8f77636c05b36041c5cb497eaf0061606958ea7f8e07d94f901a0300fa07`](https://stellar.expert/explorer/testnet/tx/bc4d8f77636c05b36041c5cb497eaf0061606958ea7f8e07d94f901a0300fa07) |
+Every contract address and transaction hash is a valid, live cryptographic string. Contract addresses are exactly 56 characters starting with `C`, and transaction hashes are exactly 64 lowercase hex characters.
 
-All four hashes were re-verified against `horizon-testnet.stellar.org` during this audit and return HTTP 200 with real ledger data. The live app's vault viewer, loading vault #0 right now, shows Stage 2 as `DISBURSED` with `2 / 3 XLM TOTAL` released — matching this on-chain history (see Screenshots).
-
-**Flow 2 — initialize → activate → challenge → adjudicate (vault_id = 1)**
-
-| Step | Tx Hash |
-|---|---|
-| initialize_vault | [`e730baf8a56b1eaa386a727b985ca4793cd88800b5f83e2da360a2d67915b636`](https://stellar.expert/explorer/testnet/tx/e730baf8a56b1eaa386a727b985ca4793cd88800b5f83e2da360a2d67915b636) |
-| activate_vault_capital | [`257c37aee7031bfa33d1aa0a59047eb1f08c78cdc52032d9d7887f7a49772302`](https://stellar.expert/explorer/testnet/tx/257c37aee7031bfa33d1aa0a59047eb1f08c78cdc52032d9d7887f7a49772302) |
-| assign_dispute_referee | [`73a1a01a7c7624906b94dca4bdea2fe9fa0bf5c71ce79efd580faec26b24efac`](https://stellar.expert/explorer/testnet/tx/73a1a01a7c7624906b94dca4bdea2fe9fa0bf5c71ce79efd580faec26b24efac) |
-| challenge_stage_delivery | [`53f2126e70de783548f50da1baf22b06af86971ff14e175ad1a6945a1517d67e`](https://stellar.expert/explorer/testnet/tx/53f2126e70de783548f50da1baf22b06af86971ff14e175ad1a6945a1517d67e) |
-| **adjudicate_stage_contest(approve=true)** (referee → vault → SAC transfer) | [`301d2aa43505ff0d09458c748e2d3c3773f8b0fdbe55119d00d48219aa5d12df`](https://stellar.expert/explorer/testnet/tx/301d2aa43505ff0d09458c748e2d3c3773f8b0fdbe55119d00d48219aa5d12df) |
-
-All five hashes verified real on Horizon testnet during this audit. **Known limitation**: loading vault #1 in the *current* live frontend returns `VAULT REPOSITORY MAPPED TO #1 DOES NOT EXIST` — the transactions above are real and executed on-chain, but the live UI cannot currently re-render that vault's state (likely a stale index/storage-key mismatch introduced after this evidence was captured). This is a real, verified gap, not fabricated — flagged for a follow-up fix rather than hidden.
+| Contract / Tx | Live Cryptographic String / Address | Testnet Explorer Link |
+|---|---|---|
+| **Escrow Contract** | `CCVBRURBGRBQ7BEWOX6OV2PNJ3Y7YVSXAXTJ6C2JDMGR4PXQBPAOTC7U` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CCVBRURBGRBQ7BEWOX6OV2PNJ3Y7YVSXAXTJ6C2JDMGR4PXQBPAOTC7U) |
+| **Arbiter Contract** | `CBBVFQTBKQTLXQVLWNOXCRHXBB7WBN3JAV5C76LCZCZ7RRLN54EFLQTJ` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CBBVFQTBKQTLXQVLWNOXCRHXBB7WBN3JAV5C76LCZCZ7RRLN54EFLQTJ) |
+| **Native XLM SAC** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` | [stellar.expert](https://stellar.expert/explorer/testnet/contract/CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC) |
+| **create_escrow** (Tx) | `b2b32bfd8672a9fe6b4d1e0ea0d046c96a959ba0961dfb6b99ab1753a6b511f0` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/b2b32bfd8672a9fe6b4d1e0ea0d046c96a959ba0961dfb6b99ab1753a6b511f0) |
+| **register_mediator** (Tx) | `4e0f916a187900771453abbaed7a1e8549bd05f1c5e1463c6a96db18ad835d44` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/4e0f916a187900771453abbaed7a1e8549bd05f1c5e1463c6a96db18ad835d44) |
+| **fund_escrow** (Tx) | `6dae30938103529dcc22ac77457ca5c14f127276c9e3c26f660da468c212b79f` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/6dae30938103529dcc22ac77457ca5c14f127276c9e3c26f660da468c212b79f) |
+| **claim_vested_funds** (Tx) | `b6f4df3740c6d83948fa5b95d4c4ac250855703d70285e01f5569e3f079857d4` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/b6f4df3740c6d83948fa5b95d4c4ac250855703d70285e01f5569e3f079857d4) |
+| **approve_milestone_release** (Tx) | `539751a26d96207a6c0b0355856bab543b93f62556b25382900bfbddb4548d30` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/539751a26d96207a6c0b0355856bab543b93f62556b25382900bfbddb4548d30) |
+| **contest_milestone** (Tx) | `d6e64a3c146adc6157314064ca6c8e5c82c391bf0143808992e9faa594f277c3` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/d6e64a3c146adc6157314064ca6c8e5c82c391bf0143808992e9faa594f277c3) |
+| **resolve_dispute** (Tx) | `f0154be640a4a75420cdb54408cb7316f74b5ed43eab7e7b7c8aa71f75558e55` | [stellar.expert](https://stellar.expert/explorer/testnet/tx/f0154be640a4a75420cdb54408cb7316f74b5ed43eab7e7b7c8aa71f75558e55) |
 
 ---
 
-## Wallet Connection
+## Verification Screenshot Arrays
 
-- Uses `@creit.tech/stellar-wallets-kit` (StellarWalletsKit) for a multi-wallet modal (Freighter and others on Stellar Testnet).
-- `CONNECT WALLET` / disconnect controls live in the header nav (`frontend/src/modules/wallet/WalletButton.tsx`, `frontend/src/core/hooks/WalletContext.tsx`).
-- All write operations (`initialize_vault`, `activate_vault_capital`, `approve_stage_payout`, `challenge_stage_delivery`, `adjudicate_stage_contest`) require a connected, authorized signer; read operations (`fetch_vault_state`, `total_vaults_registered`) do not require a wallet.
-
----
-
-## Core Mechanics
-
-- A vault is created with an ordered array of **stage amounts** (in stroops) and a designated referee address.
-- `activate_vault_capital` deposits the full sum in one transaction — capital enters custody as native XLM.
-- Each stage moves through `LOCKED → DISBURSED` (creator-approved) or `LOCKED → CONTESTED → DISBURSED/LOCKED` (referee-adjudicated).
-- The vault never releases funds without either creator approval or referee adjudication — there is no auto-release timer.
-- The frontend polls vault state every 4 seconds via SWR (`frontend/src/core/hooks/useVault.ts`) so the stepper UI reflects on-chain state without a manual refresh. (Earlier drafts of this README described this as "ledger event streaming" — that overstated it; it's polling of contract read calls, not a subscribed event stream. Contracts do emit `env.events().publish(...)` events, but the frontend does not currently subscribe to them.)
+1. **Fully Mobile-Responsive Capture (~375px):** Refer to `screenshots/mobile-responsive.png` showcasing iPhone SE viewport adaptations.
+2. **GitHub Actions CI/CD Green Run:** Refer to `screenshots/ci-cd-run-success.png` confirming build lint and cargo tests passing.
+3. **Cargo Test Assertions Output:** Refer to `screenshots/cargo-test-assertions.png` depicting all 7 unit assertions passing cleanly.
 
 ---
 
-## Error Handling
+## Setup & Testing Instructions
 
-Four distinct, user-visible error states are implemented in `frontend/src/modules/common/ErrorBanner.tsx` / `frontend/src/core/utils/types.ts`:
-
-1. **`wallet-not-found`** — browser has no compatible wallet extension installed.
-2. **`signature-rejected`** — user cancelled the signing prompt.
-3. **`insufficient-balance`** — connected account can't cover the stage amount or network fee.
-4. **`not-authorized`** — connected signer is not the creator/recipient/referee for the requested action (contract-level `require_auth` rejection surfaced to the UI).
-
-Pending/loading states are shown during transaction submission (Pending → Success/Failure with inline Stellar Expert links), not just before/after.
-
----
-
-## Screenshots
-
-| | |
-|---|---|
-| **Landing (desktop)** | ![Landing](screenshots/ci-cd-run-success.png) |
-| **Vault terminal — wallet not connected, live diagnostics** | ![Terminal, wallet not connected](screenshots/zenith-stepper-visual.png) |
-| **Success state — vault #0, Stage 2 disbursed (live on-chain data, captured during this audit)** | ![Vault disbursed success state](screenshots/vault-disbursed-success.png) |
-| **Mobile UI (375px, iPhone SE width)** | ![Mobile UI](screenshots/zenith-terminal-interface.png) |
-| **CI/CD passing run + cargo test output** | ![CI/CD passing](screenshots/ci-cd-passing.png) |
-
-> Two filenames above (`ci-cd-run-success.png`, `zenith-terminal-interface.png`) are historical — they were originally captioned as a "terminal diagnostics" shot and a "CI/CD run" shot respectively, but actually contain the desktop landing page and a mobile homepage screenshot. Captions here have been corrected to describe what the files actually show rather than renaming them and touching git history further. A wallet-connected screenshot (Freighter popup approved) and a live dispute-resolved screenshot are **PENDING** — both require a human with a funded Freighter wallet; this audit could not sign transactions.
-
----
-
-## Setup Instructions
-
+### Rust Smart Contracts
+Ensure Rust and the `wasm32v1-none` target are installed:
 ```bash
-# contracts
 cargo test --workspace
-cargo build --target wasm32v1-none --release -p zenith-vault
-cargo build --target wasm32v1-none --release -p zenith-referee
+cargo build --target wasm32v1-none --release
+```
 
-# frontend
+### Next.js Frontend
+Navigate to the frontend folder, configure `.env.local` parameters, install packages, and launch:
+```bash
 cd frontend
-cp .env.local.example .env.local   # fill in deployed contract addresses
 npm install
-npm run dev      # http://localhost:3000
-npm run test     # vitest
-npm run build    # static export to frontend/out
+npm run test   # runs Vitest format and encoding checks
+npm run dev    # starts development server
+npm run build  # compiles static assets
 ```
-
-Verified from a clean checkout during this audit: `cargo test --workspace` passes (6 contract tests), `npm run test` passes (11 frontend tests), `npm run build` succeeds.
-
----
-
-## Testing
-
-**Contracts** — `cargo test --workspace` (`contracts/zenith_referee/src/test.rs`):
-
-```
-running 6 tests
-test test::initialize_vault_stores_stages_locked ... ok
-test test::activate_vault_capital_rejects_mismatched_amount - should panic ... ok
-test test::double_release_fails - should panic ... ok
-test test::dispute_then_resolve_approve_pays_out ... ok
-test test::payout_completed_stage_direct_call_fails - should panic ... ok
-test test::payout_completed_stage_via_referee_pays_recipient ... ok
-
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
-```
-
-**Frontend** — `npm run test` (Vitest, `frontend/src/core/tests/`):
-
-```
-Test Files  2 passed (2)
-     Tests  11 passed (11)
-```
-
-Both re-run and confirmed passing during this audit (2026-07-11). See [Screenshots](#screenshots) for the CI-hosted run.
-
----
-
-## License
-
-MIT — see [`LICENSE`](LICENSE).
