@@ -1,6 +1,6 @@
 # Astraea Trust — Escrows & Linear Vesting Streams
 
-[![Live Deployment](https://img.shields.io/badge/Live-Deployment-indigo?style=for-the-badge&logo=cloudflareworkers&logoColor=white)](https://astrea-escrow.pacify-oil-retying.workers.dev/)
+[![Live Deployment](https://img.shields.io/badge/Live-Deployment-indigo?style=for-the-badge&logo=cloudflareworkers&logoColor=white)](https://astrea-escrow.fade-napped-muster.workers.dev/)
 
 ![Astraea Trust Platform Walkthrough Demo](media/demo.gif)
 
