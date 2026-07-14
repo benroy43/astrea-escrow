@@ -1,8 +1,8 @@
-name = "waypoint"
-compatibility_date = "2026-06-25"
+name = "astrea-escrow-app"
+compatibility_date = "2024-06-25"
 
 [build]
-command = "npx --yes npm@10.9.2 ci && npm run build"
+command = "npm ci && npm run build"
 cwd = "frontend"
 
 [assets]
