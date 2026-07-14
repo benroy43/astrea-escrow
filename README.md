@@ -97,11 +97,28 @@ Every contract address and transaction hash is a valid, live cryptographic strin
 
 ---
 
-## Verification Screenshot Arrays
+## Verification Screenshot Arrays & Platform Interface
 
-1. **Fully Mobile-Responsive Capture (~375px):** Refer to `screenshots/mobile-responsive.png` showcasing iPhone SE viewport adaptations.
-2. **GitHub Actions CI/CD Green Run:** Refer to `screenshots/ci-cd-run-success.png` confirming build lint and cargo tests passing.
-3. **Cargo Test Assertions Output:** Refer to `screenshots/cargo-test-assertions.png` depicting all 7 unit assertions passing cleanly.
+### Dark Mode Premium Workspace (Latest)
+| Console Overview | Mediator Hub |
+|---|---|
+| ![Console Overview](media/dark-dashboard.png) | ![Mediator Hub](media/dark-mediator-hub.png) |
+
+### On-Chain Workflow States
+1. **Interactive Console Dashboard**: Deployed escrow parameters and system diagnostics.
+   ![Interactive Console Dashboard](01-home-view-escrow.png)
+2. **Initialize Escrow Gates & Streams**: Milestone inputs, vesting durations, and designated mediator keys.
+   ![Initialize Escrow Gates & Streams](02-create-escrow-milestones.png)
+3. **Active Lock State**: Funded milestone stepper running elapsed block offset vesting streams.
+   ![Active Lock State](03-funded-stepper-midprogress.png)
+4. **On-Chain Dispute Resolution**: Resolution options ruled by registered mediators on disputed milestones.
+   ![On-Chain Dispute Resolution](04-dispute-flow-resolved.png)
+5. **Mobile Viewport Optimization**: Mobile responsiveness verified for small screens.
+   ![Mobile Viewport Optimization](05-mobile-vertical-stepper.png)
+
+### Automated Workflows & CI/CD Logs
+* **GitHub Actions Test Pipeline**: Fully compiled smart contracts, test assertions, and type-checks passing on push.
+  ![GitHub Actions Test Pipeline](ci-cd.png)
 
 ---
 
