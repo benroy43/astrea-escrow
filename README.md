@@ -1,5 +1,7 @@
 # Astraea Trust — Escrows & Linear Vesting Streams
 
+[![Live Deployment](https://img.shields.io/badge/Live-Deployment-indigo?style=for-the-badge&logo=cloudflareworkers&logoColor=white)](https://astrea-escrow.pacify-oil-retying.workers.dev/)
+
 Astraea Trust is a decentralized staged-settlement and linear asset streaming protocol built on Stellar (Soroban + Next.js). Rather than disbursing capital all at once, funds enter locked escrow gates and release stage-by-stage or stream linearly over time. If dispute conflicts arise, designated mediators resolve the issues on-chain.
 
 ---
